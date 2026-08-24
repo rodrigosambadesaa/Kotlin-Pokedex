@@ -21,6 +21,13 @@ class MainActivity : AppCompatActivity() {
                 "PokedexConnectivity",
                 "Network State Changed: connected=${state.connected}, validated=${state.internetValidated}, captivePortal=${state.captivePortalDetected}"
             )
+            val msg = if (state.connected) {
+                if (state.internetValidated) "🌐 Red disponible - Conexión validada"
+                else "📶 Red disponible"
+            } else {
+                "⚠️ Sin conexión de red"
+            }
+            android.widget.Toast.makeText(applicationContext, msg, android.widget.Toast.LENGTH_SHORT).show()
         }
     }
 

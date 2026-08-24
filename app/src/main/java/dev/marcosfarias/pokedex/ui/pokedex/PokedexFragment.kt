@@ -48,6 +48,16 @@ class PokedexFragment : Fragment() {
 
         context?.let { pokedexViewModel.checkAndFetchData(it) }
 
+        pokedexViewModel.connectivityResult.observe(viewLifecycleOwner, Observer { result ->
+            val root = viewBinding?.root ?: return@Observer
+            val message = when {
+                result.isAppDomainAvailable -> "🟢 Conectado a dominios de la app (${result.reachedEndpoint})"
+                result.isExtremeFallbackUsed && result.isReachable -> "⚠️ Dominios de app no disponibles. Fallback extremo activo (${result.reachedEndpoint})"
+                else -> "🔴 Sin conexión a Internet"
+            }
+            com.google.android.material.snackbar.Snackbar.make(root, message, com.google.android.material.snackbar.Snackbar.LENGTH_LONG).show()
+        })
+
         pokedexViewModel.getListPokemon().observe(viewLifecycleOwner, Observer { pokemons ->
             viewBinding?.recyclerView?.adapter = PokemonAdapter(
                 list = pokemons,
