@@ -14,10 +14,10 @@ class AppConnectivityManager {
 
     companion object {
         val APP_PRIMARY_HOSTS = listOf(
-            "https://gist.githubusercontent.com/mrcsxsiq/b94dbe9ab67147b642baa9109ce16e44/raw/97811a5df2df7304b5bc4fbb9ee018a0339b8a38/",
+            "https://raw.githubusercontent.com/rodrigosambadesaa/Kotlin-Pokedex/master/pokemon.json",
             "https://assets.pokemon.com/assets/cms2/img/pokedex/full/001.png",
-            "https://raw.githubusercontent.com/",
-            "https://pokeapi.co/"
+            "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/1.png",
+            "https://pokeapi.co/api/v2/pokemon/1"
         )
 
         val EXTREME_FALLBACK_DNS_RESOLVERS = listOf(
