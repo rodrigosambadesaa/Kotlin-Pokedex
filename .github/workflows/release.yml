@@ -1,0 +1,37 @@
+name: Publish APK release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Build installable APK
+        run: ./gradlew :app:assembleDebug
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            app/build/outputs/apk/debug/app-debug.apk \
+            --repo "${GITHUB_REPOSITORY}" \
+            --title "Kotlin Pokedex ${GITHUB_REF_NAME}" \
+            --generate-notes
