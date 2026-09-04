@@ -14,8 +14,8 @@ android {
         applicationId = "dev.marcosfarias.pokedex"
         minSdk = 23
         targetSdk = 33
-        versionCode = 2
-        versionName = "3.0.1"
+        versionCode = 3
+        versionName = "3.0.2"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildTypes {

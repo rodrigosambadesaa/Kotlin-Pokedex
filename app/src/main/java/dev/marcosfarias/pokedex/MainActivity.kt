@@ -16,6 +16,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
+        networkObserver?.close()
         networkObserver = ConnectivityAndInternetAccess.observeNetwork(this) { state ->
             Log.d(
                 "PokedexConnectivity",
