@@ -638,9 +638,7 @@ class ConnectivityAndInternetAccess private constructor(
                     val attempt = connectionAttemptQueue.removeFirst()
                     if (!attempt.closed) {
                         attempt.closed = true
-                        connectionAttempts.updateAndGet { value ->
-                            if (value > 0) value - 1 else 0
-                        }
+                        if (connectionAttempts.get() > 0) connectionAttempts.decrementAndGet()
                         return
                     }
                 }
@@ -2092,9 +2090,7 @@ class ConnectivityAndInternetAccess private constructor(
                 }
                 attempt.closed = true
                 connectionAttemptQueue.remove(attempt)
-                connectionAttempts.updateAndGet { value ->
-                    if (value > 0) value - 1 else 0
-                }
+                if (connectionAttempts.get() > 0) connectionAttempts.decrementAndGet()
                 connectionAttemptStalled.set(true)
                 return true
             }
@@ -2118,9 +2114,7 @@ class ConnectivityAndInternetAccess private constructor(
 
                     attempt.closed = true
                     connectionAttemptQueue.removeFirst()
-                    connectionAttempts.updateAndGet { value ->
-                        if (value > 0) value - 1 else 0
-                    }
+                    if (connectionAttempts.get() > 0) connectionAttempts.decrementAndGet()
                     connectionAttemptStalled.set(true)
                 }
             }
