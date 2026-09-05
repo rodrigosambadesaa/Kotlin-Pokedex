@@ -1,6 +1,9 @@
 package dev.marcosfarias.pokedex.utils
 
 import android.content.Context
+import java.io.IOException
+import java.util.concurrent.atomic.AtomicBoolean
+import javax.net.ssl.SSLException
 
 data class AppConnectivityResult(
     val isReachable: Boolean,
@@ -13,83 +16,88 @@ data class AppConnectivityResult(
 class AppConnectivityManager {
 
     companion object {
-        val APP_PRIMARY_HOSTS = listOf(
-            "https://raw.githubusercontent.com/rodrigosambadesaa/Kotlin-Pokedex/master/pokemon.json",
-            "https://assets.pokemon.com/assets/cms2/img/pokedex/full/001.png",
-            "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/1.png",
-            "https://pokeapi.co/api/v2/pokemon/1"
-        )
-
-        val EXTREME_FALLBACK_DNS_RESOLVERS = listOf(
-            "1.1.1.1",
-            "8.8.8.8",
-            "9.9.9.9",
-            "208.67.222.222"
-        )
-
-        val EXTREME_FALLBACK_HOSTS = listOf(
-            "https://www.google.com/generate_204",
-            "https://www.apple.com/",
-            "https://www.amazon.com/"
-        )
+        val shared: AppConnectivityManager by lazy { AppConnectivityManager() }
     }
 
-    private val primaryConnectivity = ConnectivityAndInternetAccess.Builder()
-        .setHosts(APP_PRIMARY_HOSTS)
-        .build()
-
-    private val fallbackConnectivity = ConnectivityAndInternetAccess.Builder()
-        .setDnsResolvers(EXTREME_FALLBACK_DNS_RESOLVERS)
-        .setHosts(EXTREME_FALLBACK_HOSTS)
-        .build()
+    private val generalDiagnostic by lazy { ConnectivityAndInternetAccess.Builder().build() }
+    private val diagnosticInFlight = AtomicBoolean(false)
 
     /**
-     * Executes a multi-tier connectivity check:
-     * 1. Checks primary app domains first.
-     * 2. If primary domains fail, falls back to extreme fallback (DNS resolvers + default hosts).
+     * Performs only the cheap local precheck. It deliberately does not perform DNS,
+     * TCP, TLS or HTTP traffic. The real operation decides whether its service works.
      */
     fun checkConnectivity(
         context: Context,
         onResult: (AppConnectivityResult) -> Unit
-    ): ConnectivityAndInternetAccess.Request {
-        return primaryConnectivity.checkInternetAsync(context) { primaryResult ->
-            if (primaryResult.reachable) {
-                onResult(
-                    AppConnectivityResult(
-                        isReachable = true,
-                        isAppDomainAvailable = true,
-                        reachedEndpoint = primaryResult.reachedHost,
-                        isExtremeFallbackUsed = false,
-                        diagnosticMessage = "App domain reachable via ${primaryResult.reachedHost}"
-                    )
-                )
-            } else {
-                fallbackConnectivity.checkInternetAsync(context) { fallbackResult ->
-                    if (fallbackResult.reachable) {
-                        onResult(
-                            AppConnectivityResult(
-                                isReachable = true,
-                                isAppDomainAvailable = false,
-                                reachedEndpoint = fallbackResult.reachedHost,
-                                isExtremeFallbackUsed = true,
-                                diagnosticMessage = "General Internet reachable via ${fallbackResult.reachedHost}, but primary app domains unreachable."
-                            )
-                        )
-                    } else {
-                        onResult(
-                            AppConnectivityResult(
-                                isReachable = false,
-                                isAppDomainAvailable = false,
-                                reachedEndpoint = null,
-                                isExtremeFallbackUsed = true,
-                                diagnosticMessage = "No Internet connection detected."
-                            )
-                        )
-                    }
+    ) {
+        val connected = ConnectivityAndInternetAccess.isConnected(context)
+        onResult(
+            AppConnectivityResult(
+                isReachable = connected,
+                isAppDomainAvailable = false,
+                reachedEndpoint = null,
+                isExtremeFallbackUsed = false,
+                diagnosticMessage = if (connected) {
+                    "Red utilizable disponible; se ejecutará la operación real."
+                } else {
+                    "Sin red utilizable; operación omitida y se usará el modo offline."
                 }
-            }
+            )
+        )
+    }
+
+    /**
+     * Runs the active general diagnostic only after a network-shaped operation failure.
+     * HTTP responses are not passed here because they already prove server communication.
+     */
+    fun diagnoseNetworkFailure(
+        context: Context,
+        failure: Throwable,
+        onResult: (AppConnectivityResult) -> Unit = {}
+    ): ConnectivityAndInternetAccess.Request? {
+        if (!isNetworkFailure(failure)) return null
+
+        if (!ConnectivityAndInternetAccess.isConnected(context)) {
+            onResult(offlineResult())
+            return null
+        }
+
+        if (!diagnosticInFlight.compareAndSet(false, true)) return null
+
+        return generalDiagnostic.checkInternetAsync(context) { result ->
+            diagnosticInFlight.set(false)
+            onResult(
+                AppConnectivityResult(
+                    isReachable = result.reachable,
+                    isAppDomainAvailable = false,
+                    reachedEndpoint = result.reachedHost,
+                    isExtremeFallbackUsed = true,
+                    diagnosticMessage = if (result.reachable) {
+                        "La red general tiene acceso a Internet; el servicio/target concreto ha fallado."
+                    } else {
+                        "La operación falló y no se ha confirmado acceso general a Internet."
+                    }
+                )
+            )
         }
     }
+
+    fun isNetworkFailure(failure: Throwable): Boolean {
+        var cause: Throwable? = failure
+        while (cause != null) {
+            if (cause is IOException || cause is SSLException) return true
+            cause = cause.cause
+        }
+        return false
+    }
+
+    private fun offlineResult() = AppConnectivityResult(
+        isReachable = false,
+        isAppDomainAvailable = false,
+        reachedEndpoint = null,
+        isExtremeFallbackUsed = false,
+        diagnosticMessage = "Sin red utilizable; operación omitida y se usará el modo offline."
+    )
 
     fun observeNetwork(
         context: Context,

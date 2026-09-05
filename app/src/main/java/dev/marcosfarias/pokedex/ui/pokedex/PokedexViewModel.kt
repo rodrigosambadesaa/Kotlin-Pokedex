@@ -23,10 +23,6 @@ class PokedexViewModel(
     private val _connectivityResult = MutableLiveData<AppConnectivityResult>()
     val connectivityResult: LiveData<AppConnectivityResult> get() = _connectivityResult
 
-    init {
-        initNetworkRequest(null)
-    }
-
     fun checkAndFetchData(context: Context) {
         appConnectivityManager.checkConnectivity(context) { result ->
             _connectivityResult.postValue(result)
@@ -38,7 +34,7 @@ class PokedexViewModel(
         }
     }
 
-    private fun initNetworkRequest(context: Context?) {
+    private fun initNetworkRequest(context: Context) {
         val call = pokemonService.get()
 
         call.enqueue(object : Callback<List<Pokemon>?> {
@@ -48,16 +44,52 @@ class PokedexViewModel(
             ) {
                 val pokemons = response.body()
                 if (!pokemons.isNullOrEmpty()) {
+                    _connectivityResult.postValue(
+                        AppConnectivityResult(
+                            isReachable = true,
+                            isAppDomainAvailable = true,
+                            reachedEndpoint = "pokemon.json",
+                            isExtremeFallbackUsed = false,
+                            diagnosticMessage = "Datos de Pokémon actualizados correctamente."
+                        )
+                    )
                     thread {
                         pokemonDAO.add(pokemons)
                     }
-                } else if (context != null) {
+                } else {
+                    _connectivityResult.postValue(
+                        AppConnectivityResult(
+                            isReachable = true,
+                            isAppDomainAvailable = false,
+                            reachedEndpoint = null,
+                            isExtremeFallbackUsed = false,
+                            diagnosticMessage = "El servicio respondió sin datos; se usará el modo offline."
+                        )
+                    )
                     loadLocalAssets(context)
                 }
             }
 
             override fun onFailure(call: Call<List<Pokemon>?>, t: Throwable) {
-                if (context != null) {
+                var callbackDelivered = false
+                val diagnosticRequest = appConnectivityManager.diagnoseNetworkFailure(
+                    context,
+                    t
+                ) { result ->
+                    callbackDelivered = true
+                    _connectivityResult.postValue(result)
+                    loadLocalAssets(context)
+                }
+                if (diagnosticRequest == null && !callbackDelivered) {
+                    _connectivityResult.postValue(
+                        AppConnectivityResult(
+                            isReachable = !appConnectivityManager.isNetworkFailure(t),
+                            isAppDomainAvailable = false,
+                            reachedEndpoint = null,
+                            isExtremeFallbackUsed = false,
+                            diagnosticMessage = "La operación del servicio falló; se usará el modo offline."
+                        )
+                    )
                     loadLocalAssets(context)
                 }
             }

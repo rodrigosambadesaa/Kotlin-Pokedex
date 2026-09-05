@@ -53,6 +53,7 @@ class PokedexFragment : Fragment() {
             val message = when {
                 result.isAppDomainAvailable -> "🟢 Conectado a dominios de la app (${result.reachedEndpoint})"
                 result.isExtremeFallbackUsed && result.isReachable -> "⚠️ Dominios de app no disponibles. Fallback extremo activo (${result.reachedEndpoint})"
+                result.isReachable -> "📶 Red disponible; se ha ejecutado la operación real."
                 else -> "🔴 Sin conexión a Internet"
             }
             com.google.android.material.snackbar.Snackbar.make(root, message, com.google.android.material.snackbar.Snackbar.LENGTH_LONG).show()
