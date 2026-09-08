@@ -30,9 +30,11 @@ Go to the [releases page](https://github.com/rodrigosambadesaa/Kotlin-Pokedex/re
 
 ## Connectivity policy
 
-Before starting a network operation, the app performs a cheap local check using
-`ConnectivityAndInternetAccess.isConnected()` (or the passive `NetworkObserver` state).
-When no usable network exists, network work is skipped and the local Pokémon asset is used.
+Before starting a network operation, the app performs cheap local checks using both
+`ConnectivityAndInternetAccess.isConnected()` and `hasPhysicalNetwork()` (or the passive
+`NetworkObserver` state). This prevents a dangling VPN-only network from being treated as
+Internet connectivity. When no usable physical network exists, network work is skipped and
+the local Pokémon asset is used.
 When a network exists, the app starts the real Retrofit or Glide operation directly; those
 operations retain their own timeouts and exception handling. A general active connectivity
 diagnostic is run only after a network-shaped failure such as DNS, route, timeout, or TLS

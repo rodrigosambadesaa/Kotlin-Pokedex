@@ -42,6 +42,11 @@ class PokedexViewModelTest {
     }
 
     @Test
+    fun `GIVEN dangling VPN WHEN checking policy THEN remote request is blocked`() {
+        Assert.assertFalse(AppConnectivityManager().canStartRemoteRequest(true, false))
+    }
+
+    @Test
     fun `GIVEN mocked dao results WHEN get list of pokemons from view model THEN result as expected`() {
         // GIVEN
         val expected = listOf(

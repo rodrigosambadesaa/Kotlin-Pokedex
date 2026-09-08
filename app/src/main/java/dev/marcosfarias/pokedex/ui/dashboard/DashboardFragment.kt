@@ -77,7 +77,9 @@ class DashboardFragment : Fragment() {
                 }
 
                 dashboardViewBinding?.imageView?.let {
-                    if (ConnectivityAndInternetAccess.isConnected(view.context)) {
+                    if (ConnectivityAndInternetAccess.isConnected(view.context) &&
+                        ConnectivityAndInternetAccess.hasPhysicalNetwork(view.context)
+                    ) {
                         GlideApp.with(view.context)
                             .load(pokemon.imageurl)
                             .listener(

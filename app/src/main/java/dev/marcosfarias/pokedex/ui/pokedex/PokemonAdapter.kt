@@ -55,7 +55,9 @@ class PokemonAdapter(
                 viewBinding.textViewType1.isVisible = thirdType != null
             }
 
-            if (ConnectivityAndInternetAccess.isConnected(itemView.context)) {
+            if (ConnectivityAndInternetAccess.isConnected(itemView.context) &&
+                ConnectivityAndInternetAccess.hasPhysicalNetwork(itemView.context)
+            ) {
                 GlideApp.with(itemView.context)
                     .load(item.imageurl)
                     .placeholder(android.R.color.transparent)

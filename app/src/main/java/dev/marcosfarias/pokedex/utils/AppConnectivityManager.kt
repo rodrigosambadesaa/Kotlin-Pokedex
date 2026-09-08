@@ -30,7 +30,7 @@ class AppConnectivityManager {
         context: Context,
         onResult: (AppConnectivityResult) -> Unit
     ) {
-        val connected = ConnectivityAndInternetAccess.isConnected(context)
+        val connected = canStartRemoteRequest(context)
         onResult(
             AppConnectivityResult(
                 isReachable = connected,
@@ -57,7 +57,7 @@ class AppConnectivityManager {
     ): ConnectivityAndInternetAccess.Request? {
         if (!isNetworkFailure(failure)) return null
 
-        if (!ConnectivityAndInternetAccess.isConnected(context)) {
+        if (!canStartRemoteRequest(context)) {
             onResult(offlineResult())
             return null
         }
@@ -90,6 +90,17 @@ class AppConnectivityManager {
         }
         return false
     }
+
+    fun canStartRemoteRequest(context: Context): Boolean =
+        canStartRemoteRequest(
+            ConnectivityAndInternetAccess.isConnected(context),
+            ConnectivityAndInternetAccess.hasPhysicalNetwork(context)
+        )
+
+    internal fun canStartRemoteRequest(
+        isConnected: Boolean,
+        hasPhysicalNetwork: Boolean
+    ): Boolean = isConnected && hasPhysicalNetwork
 
     private fun offlineResult() = AppConnectivityResult(
         isReachable = false,

@@ -638,7 +638,7 @@ class ConnectivityAndInternetAccess private constructor(
                     val attempt = connectionAttemptQueue.removeFirst()
                     if (!attempt.closed) {
                         attempt.closed = true
-                        if (connectionAttempts.get() > 0) connectionAttempts.decrementAndGet()
+                        decrementConnectionAttempts()
                         return
                     }
                 }
@@ -699,6 +699,30 @@ class ConnectivityAndInternetAccess private constructor(
                 clearConnectionAttempts()
             }
             return connected
+        }
+
+        /**
+         * Cheap passive guard that ignores a dangling VPN-only default network.
+         * A VPN capability can remain present after its underlying Wi-Fi/mobile
+         * transport disappeared, so it must not make the app appear connected.
+         */
+        @JvmStatic
+        fun hasPhysicalNetwork(context: Context?): Boolean {
+            context ?: throw IllegalArgumentException("context == null")
+            val connectivityManager = manager(context)
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                return connectivityManager.allNetworks.any { network ->
+                    val capabilities = connectivityManager.getNetworkCapabilities(network)
+                    capabilities.isUsable() && (
+                        capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true ||
+                            capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) == true ||
+                            capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) == true
+                    )
+                }
+            }
+
+            return connectivityManager.activeNetworkInfo.isConnectedLegacy()
         }
 
         /** Cheap point-in-time snapshot of the application's default network. */
@@ -2083,6 +2107,16 @@ class ConnectivityAndInternetAccess private constructor(
                     }
                 }
             )
+
+        private fun decrementConnectionAttempts() {
+            while (true) {
+                val current = connectionAttempts.get()
+                if (current <= 0 || connectionAttempts.compareAndSet(current, current - 1)) {
+                    return
+                }
+            }
+        }
+
         private fun timeoutConnectionAttempt(attempt: ConnectionAttempt): Boolean {
             synchronized(connectionAttemptLock) {
                 if (attempt.closed) {
@@ -2090,7 +2124,7 @@ class ConnectivityAndInternetAccess private constructor(
                 }
                 attempt.closed = true
                 connectionAttemptQueue.remove(attempt)
-                if (connectionAttempts.get() > 0) connectionAttempts.decrementAndGet()
+                decrementConnectionAttempts()
                 connectionAttemptStalled.set(true)
                 return true
             }
@@ -2114,7 +2148,7 @@ class ConnectivityAndInternetAccess private constructor(
 
                     attempt.closed = true
                     connectionAttemptQueue.removeFirst()
-                    if (connectionAttempts.get() > 0) connectionAttempts.decrementAndGet()
+                    decrementConnectionAttempts()
                     connectionAttemptStalled.set(true)
                 }
             }

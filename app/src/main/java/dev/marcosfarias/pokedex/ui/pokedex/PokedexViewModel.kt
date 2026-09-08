@@ -43,7 +43,7 @@ class PokedexViewModel(
                 response: Response<List<Pokemon>?>
             ) {
                 val pokemons = response.body()
-                if (!pokemons.isNullOrEmpty()) {
+                if (response.isSuccessful && !pokemons.isNullOrEmpty()) {
                     _connectivityResult.postValue(
                         AppConnectivityResult(
                             isReachable = true,
@@ -57,13 +57,18 @@ class PokedexViewModel(
                         pokemonDAO.add(pokemons)
                     }
                 } else {
+                    val message = if (response.isSuccessful) {
+                        "El servicio respondió sin datos; se usará el modo offline."
+                    } else {
+                        "El servicio no está disponible (${response.code()}); se usará el modo offline."
+                    }
                     _connectivityResult.postValue(
                         AppConnectivityResult(
                             isReachable = true,
                             isAppDomainAvailable = false,
                             reachedEndpoint = null,
                             isExtremeFallbackUsed = false,
-                            diagnosticMessage = "El servicio respondió sin datos; se usará el modo offline."
+                            diagnosticMessage = message
                         )
                     )
                     loadLocalAssets(context)
