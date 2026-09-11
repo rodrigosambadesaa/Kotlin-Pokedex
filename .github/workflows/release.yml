@@ -23,8 +23,8 @@ jobs:
           java-version: "17"
           cache: gradle
 
-      - name: Build installable APK
-        run: ./gradlew :app:assembleDebug
+      - name: Build release APK
+        run: ./gradlew :app:assembleRelease
 
       - name: Publish GitHub release
         env:
@@ -32,12 +32,12 @@ jobs:
         run: |
           if gh release view "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" > /dev/null 2>&1; then
             gh release upload "${GITHUB_REF_NAME}" \
-              app/build/outputs/apk/debug/app-debug.apk \
+              app/build/outputs/apk/release/app-release.apk \
               --repo "${GITHUB_REPOSITORY}" \
               --clobber
           else
             gh release create "${GITHUB_REF_NAME}" \
-              app/build/outputs/apk/debug/app-debug.apk \
+              app/build/outputs/apk/release/app-release.apk \
               --repo "${GITHUB_REPOSITORY}" \
               --title "Kotlin Pokedex ${GITHUB_REF_NAME}" \
               --generate-notes

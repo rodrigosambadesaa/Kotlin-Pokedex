@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
@@ -49,14 +50,14 @@ class PokedexFragment : Fragment() {
         context?.let { pokedexViewModel.checkAndFetchData(it) }
 
         pokedexViewModel.connectivityResult.observe(viewLifecycleOwner, Observer { result ->
-            val root = viewBinding?.root ?: return@Observer
             val message = when {
-                result.isAppDomainAvailable -> "🟢 Conectado a dominios de la app (${result.reachedEndpoint})"
-                result.isExtremeFallbackUsed && result.isReachable -> "⚠️ Dominios de app no disponibles. Fallback extremo activo (${result.reachedEndpoint})"
-                result.isReachable -> "📶 Red disponible; se ha ejecutado la operación real."
-                else -> "🔴 Sin conexión a Internet"
+                result.isAppDomainAvailable -> getString(dev.marcosfarias.pokedex.R.string.network_backend_available)
+                result.isExtremeFallbackUsed && result.isReachable -> getString(dev.marcosfarias.pokedex.R.string.network_backend_unavailable)
+                result.isExtremeFallbackUsed -> getString(dev.marcosfarias.pokedex.R.string.network_no_internet)
+                result.isReachable -> getString(dev.marcosfarias.pokedex.R.string.network_operation_success)
+                else -> getString(dev.marcosfarias.pokedex.R.string.network_operation_failed)
             }
-            com.google.android.material.snackbar.Snackbar.make(root, message, com.google.android.material.snackbar.Snackbar.LENGTH_LONG).show()
+            Toast.makeText(requireContext(), message, Toast.LENGTH_LONG).show()
         })
 
         pokedexViewModel.getListPokemon().observe(viewLifecycleOwner, Observer { pokemons ->
